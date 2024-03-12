@@ -1,6 +1,6 @@
 import requests
 
-# All the locations and their coordinates
+# All the ski resorts and there lat and lon
 locations = {
     "Ankara Turkije": {"lat": 39.9334, "lon": 32.8597},
     "Athene Griekeland": {"lat": 37.9838, "lon": 23.7275},
@@ -46,13 +46,11 @@ class WeatherInfo:
         t = t / len(self.weather_data)
         return self.round_result(t)
 
-    # Calculates the average amount of rain in the week
     def avg_rain_week(self):
         total_rain = sum(WeatherTime.get_rain() for WeatherTime in self.weather_data)
         avg_rain = total_rain / 5
         return self.round_result(avg_rain)
 
-    # Sorts the amount of rain into 3 categories.
     def rain_week_no_numb(self):
         if self.avg_rain_week() <= 1:
             return "Very little"
@@ -61,32 +59,27 @@ class WeatherInfo:
         elif self.avg_rain_week() >= 2:
             return "More than 2mm"
 
-    # Calculates the score for every location so we can sort the locations to the user's preference.
+    # Gets the rating for the ski resort
     def get_rating(self):
         score = 0
+        if self.avg_temp_week() - temp_preference <= 2:
+            score = 5
+        elif self.avg_temp_week() - temp_preference <= 3:
+            score = 4
+        elif self.avg_temp_week() - temp_preference <= 5:
+            score = 3
+        elif self.avg_temp_week() - temp_preference <= 7:
+            score = 2
+        elif self.avg_temp_week() - temp_preference <= 10:
+            score = 1
 
-        if abs(self.avg_temp_week() - temp_preference) <= 2:
-            score += 5
-        elif abs(self.avg_temp_week() - temp_preference) <= 3:
+        if self.avg_rain_week() <= 1 and rain_preference == 1:
             score += 4
-        elif abs(self.avg_temp_week() - temp_preference) <= 5:
-            score += 3
-        elif abs(self.avg_temp_week() - temp_preference) <= 7:
-            score += 2
-        elif abs(self.avg_temp_week() - temp_preference) <= 10:
-            score += 1
-
-        if rain_preference == 1 and self.avg_rain_week() <= 1:
+        elif 1 < self.avg_rain_week() < 2 and rain_preference == 2:
             score += 4
-        elif rain_preference == 2:
-            if 1 < self.avg_rain_week() < 2:
-                score += 4
         elif rain_preference == 3:
             score += 4
 
-        return score
-
-# Class for getting information out of just 1 data slot.
 class WeatherTime:
     def __init__(self, data):
         self.data = data
@@ -112,17 +105,15 @@ class WeatherTime:
     def get_temperature(self):
         return self.get_main_item("temp")
 
+###################################################################"
 
-# Asks the user preferences.
 temp_preference = int(input("What temperature do you want? "))
 print("Choose your rain preference:")
 print("1. Very little rain.")
 print("2. Less than 2mm rain per day.")
 print("3. No preference")
-rain_preference = int(input("Choose your preference (1/2/3): "))
+rain_preference = input("Choose your preference (1/2/3): ")
 
-print("Getting data from OpenWeather API...")
-# Calls the OpenWeather API for every location.
 weather_data = []
 for locations, coordiates in locations.items():
     lat = coordiates.get("lat")
@@ -130,17 +121,17 @@ for locations, coordiates in locations.items():
     response = requests.get(f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid=45bd72ea28e3d31cd6abd08f17e7d154&units=metric")
     weather_data.append(WeatherInfo(locations, response.json()))
 
-# Lamda function to sort the locations based on the score.
-weather_data.sort(key=lambda x: x.get_rating(), reverse=True)
+    # HIER CODE VOOR VOLGORDE
 
 
 # Writes the message of the email
-print("Making Mail...")
 email_message = ""
 for WeatherInfo in weather_data:
     location_info = f"""
     {WeatherInfo.get_location_name()}:
-        {WeatherInfo.rain_week_no_numb()} rain
+        {WeatherInfo.rain_week_no_numb()} rain  |   {WeatherInfo.avg_rain_week()}
         Average Temperature: {WeatherInfo.avg_temp_week()} °C
     """
     email_message += location_info
+
+print(email_message)
